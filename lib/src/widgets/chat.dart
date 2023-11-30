@@ -290,6 +290,7 @@ class Chat extends StatefulWidget {
     types.TextMessage, {
     required int messageWidth,
     required bool showName,
+    required bool currentUserIsAuthor,
   })? textMessageBuilder;
 
   /// See [Message.textMessageOptions].
@@ -359,8 +360,22 @@ class ChatState extends State<Chat> {
       _scrollController.scrollToIndex(
         unreadHeaderIndex,
         duration: widget.scrollToUnreadOptions.scrollDuration,
+        preferPosition: AutoScrollPosition.begin,
       );
     }
+  }
+
+  /// Scroll to the unread header.
+  Future<void> scrollToUnreadHeaderWithoutAnimation() {
+    final unreadHeaderIndex = chatMessageAutoScrollIndexById[_unreadHeaderId];
+    if (unreadHeaderIndex != null) {
+      return _scrollController.scrollToIndex(
+        unreadHeaderIndex,
+        duration: const Duration(milliseconds: 200),
+        preferPosition: AutoScrollPosition.begin,
+      );
+    }
+    return Future.value();
   }
 
   /// Scroll to the message with the specified [id].

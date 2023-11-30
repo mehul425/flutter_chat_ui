@@ -132,16 +132,19 @@ class _ChatListState extends State<ChatList>
     _oldData = List.from(widget.items);
   }
 
-  Widget _newMessageBuilder(int index, Animation<double> animation) {
+  Widget _newMessageBuilder(int index, Animation<double>? animation) {
     try {
       final item = _oldData[index];
-
-      return SizeTransition(
-        key: _valueKeyForItem(item),
-        axisAlignment: -1,
-        sizeFactor: animation.drive(CurveTween(curve: Curves.easeOutQuad)),
-        child: widget.itemBuilder(item, index),
-      );
+      if (animation == null) {
+        return widget.itemBuilder(item, index);
+      } else {
+        return SizeTransition(
+          key: _valueKeyForItem(item),
+          axisAlignment: -1,
+          sizeFactor: animation.drive(CurveTween(curve: Curves.easeOutQuad)),
+          child: widget.itemBuilder(item, index),
+        );
+      }
     } catch (e) {
       return const SizedBox();
     }
@@ -219,45 +222,47 @@ class _ChatListState extends State<ChatList>
   Widget build(BuildContext context) =>
       NotificationListener<ScrollNotification>(
         onNotification: (notification) {
-          if (notification.metrics.pixels > 10.0 && !_indicatorOnScrollStatus) {
-            setState(() {
-              _indicatorOnScrollStatus = !_indicatorOnScrollStatus;
-            });
-          } else if (notification.metrics.pixels == 0.0 &&
-              _indicatorOnScrollStatus) {
-            setState(() {
-              _indicatorOnScrollStatus = !_indicatorOnScrollStatus;
-            });
+          if (mounted) {
+            if (notification.metrics.pixels > 10.0 &&
+                !_indicatorOnScrollStatus) {
+              setState(() {
+                _indicatorOnScrollStatus = !_indicatorOnScrollStatus;
+              });
+            } else if (notification.metrics.pixels == 0.0 &&
+                _indicatorOnScrollStatus) {
+              setState(() {
+                _indicatorOnScrollStatus = !_indicatorOnScrollStatus;
+              });
+            }
+
+            if (widget.onEndReached == null || widget.isLastPage == true) {
+              return false;
+            }
+
+            if (notification.metrics.pixels >=
+                (notification.metrics.maxScrollExtent *
+                    (widget.onEndReachedThreshold ?? 0.75))) {
+              if (widget.items.isEmpty || _isNextPageLoading) return false;
+
+              _controller.duration = Duration.zero;
+              _controller.forward();
+
+              setState(() {
+                _isNextPageLoading = true;
+              });
+
+              widget.onEndReached!().whenComplete(() {
+                if (mounted) {
+                  _controller.duration = const Duration(milliseconds: 300);
+                  _controller.reverse();
+
+                  setState(() {
+                    _isNextPageLoading = false;
+                  });
+                }
+              });
+            }
           }
-
-          if (widget.onEndReached == null || widget.isLastPage == true) {
-            return false;
-          }
-
-          if (notification.metrics.pixels >=
-              (notification.metrics.maxScrollExtent *
-                  (widget.onEndReachedThreshold ?? 0.75))) {
-            if (widget.items.isEmpty || _isNextPageLoading) return false;
-
-            _controller.duration = Duration.zero;
-            _controller.forward();
-
-            setState(() {
-              _isNextPageLoading = true;
-            });
-
-            widget.onEndReached!().whenComplete(() {
-              if (mounted) {
-                _controller.duration = const Duration(milliseconds: 300);
-                _controller.reverse();
-
-                setState(() {
-                  _isNextPageLoading = false;
-                });
-              }
-            });
-          }
-
           return false;
         },
         child: CustomScrollView(
@@ -284,24 +289,32 @@ class _ChatListState extends State<ChatList>
                     : const SizedBox.shrink(),
               ),
             ),
+            // SliverPadding(
+            //   padding: const EdgeInsets.only(bottom: 4),
+            //   sliver: SliverAnimatedList(
+            //     findChildIndexCallback: (Key key) {
+            //       if (key is ValueKey<Object>) {
+            //         final newIndex = widget.items.indexWhere(
+            //           (v) => _valueKeyForItem(v) == key,
+            //         );
+            //         if (newIndex != -1) {
+            //           return newIndex;
+            //         }
+            //       }
+            //       return null;
+            //     },
+            //     initialItemCount: widget.items.length,
+            //     key: _listKey,
+            //     itemBuilder: (_, index, animation) =>
+            //         _newMessageBuilder(index, animation),
+            //   ),
+            // ),
             SliverPadding(
               padding: const EdgeInsets.only(bottom: 4),
-              sliver: SliverAnimatedList(
-                findChildIndexCallback: (Key key) {
-                  if (key is ValueKey<Object>) {
-                    final newIndex = widget.items.indexWhere(
-                      (v) => _valueKeyForItem(v) == key,
-                    );
-                    if (newIndex != -1) {
-                      return newIndex;
-                    }
-                  }
-                  return null;
-                },
-                initialItemCount: widget.items.length,
+              sliver: SliverList.builder(
+                itemCount: widget.items.length,
                 key: _listKey,
-                itemBuilder: (_, index, animation) =>
-                    _newMessageBuilder(index, animation),
+                itemBuilder: (_, index) => _newMessageBuilder(index, null),
               ),
             ),
             SliverPadding(

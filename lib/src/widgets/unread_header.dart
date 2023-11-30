@@ -14,14 +14,21 @@ class UnreadHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         alignment: Alignment.center,
-        color: InheritedChatTheme.of(context).theme.unreadHeaderTheme.color,
-        margin: EdgeInsets.only(bottom: 24, top: marginTop ?? 0),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Text(
-          InheritedL10n.of(context).l10n.unreadMessagesLabel,
-          style:
-              InheritedChatTheme.of(context).theme.unreadHeaderTheme.textStyle,
-          textAlign: TextAlign.center,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 4, top: marginTop ?? 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: InheritedChatTheme.of(context).theme.unreadHeaderTheme.color,
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            InheritedL10n.of(context).l10n.unreadMessagesLabel,
+            style: InheritedChatTheme.of(context)
+                .theme
+                .unreadHeaderTheme
+                .textStyle,
+            textAlign: TextAlign.center,
+          ),
         ),
       );
 }

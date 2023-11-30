@@ -130,7 +130,7 @@ List<Object> calculateChatMessages(
     final nextMessageSameAuthor = message.author.id == nextMessage?.author.id;
     final notMyMessage = message.author.id != user.id;
 
-    var nextMessageDateThreshold = false;
+    // var nextMessageDateThreshold = false;
     var nextMessageDifferentDay = false;
     var nextMessageInGroup = false;
     var showName = false;
@@ -161,15 +161,15 @@ List<Object> calculateChatMessages(
     }
 
     if (messageHasCreatedAt && nextMessageHasCreatedAt) {
-      nextMessageDateThreshold =
-          nextMessage!.createdAt! - message.createdAt! >= dateHeaderThreshold;
+      // nextMessageDateThreshold =
+      //     nextMessage!.createdAt! - message.createdAt! >= dateHeaderThreshold;
 
       nextMessageDifferentDay = DateTime.fromMillisecondsSinceEpoch(
             message.createdAt!,
             isUtc: dateIsUtc,
           ).day !=
           DateTime.fromMillisecondsSinceEpoch(
-            nextMessage.createdAt!,
+            nextMessage!.createdAt!,
             isUtc: dateIsUtc,
           ).day;
 
@@ -217,13 +217,21 @@ List<Object> calculateChatMessages(
       chatMessages.insert(
         0,
         MessageSpacer(
-          height: 12,
+          height: 0,
           id: message.id,
         ),
       );
     }
-
-    if (nextMessageDifferentDay || nextMessageDateThreshold) {
+    if (message.id == lastReadMessageId && !isLast) {
+      chatMessages.insert(
+        0,
+        UnreadHeaderData(
+          marginTop:
+          nextMessageDifferentDay /*|| nextMessageDateThreshold*/ ? 0 : 8,
+        ),
+      );
+    }
+    if (nextMessageDifferentDay /*|| nextMessageDateThreshold*/) {
       chatMessages.insert(
         0,
         DateHeader(
@@ -251,15 +259,7 @@ List<Object> calculateChatMessages(
       );
     }
 
-    if (message.id == lastReadMessageId && !isLast) {
-      chatMessages.insert(
-        0,
-        UnreadHeaderData(
-          marginTop:
-              nextMessageDifferentDay || nextMessageDateThreshold ? 0 : 8,
-        ),
-      );
-    }
+
 
     if (message is types.ImageMessage) {
       if (kIsWeb) {

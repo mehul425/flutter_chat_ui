@@ -168,6 +168,7 @@ class Message extends StatelessWidget {
     types.TextMessage, {
     required int messageWidth,
     required bool showName,
+    required bool currentUserIsAuthor,
   })? textMessageBuilder;
 
   /// See [TextMessage.options].
@@ -201,12 +202,12 @@ class Message extends StatelessWidget {
   ) =>
       bubbleBuilder != null
           ? bubbleBuilder!(
-              _messageBuilder(),
+              _messageBuilder(currentUserIsAuthor),
               message: message,
               nextMessageInGroup: roundBorder,
             )
           : enlargeEmojis && hideBackgroundOnEmojiMessages
-              ? _messageBuilder()
+              ? _messageBuilder(currentUserIsAuthor)
               : Container(
                   decoration: BoxDecoration(
                     borderRadius: borderRadius,
@@ -217,11 +218,11 @@ class Message extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: borderRadius,
-                    child: _messageBuilder(),
+                    child: _messageBuilder(currentUserIsAuthor),
                   ),
                 );
 
-  Widget _messageBuilder() {
+  Widget _messageBuilder(bool currentUserIsAuthor) {
     switch (message.type) {
       case types.MessageType.audio:
         final audioMessage = message as types.AudioMessage;
@@ -255,6 +256,7 @@ class Message extends StatelessWidget {
                 textMessage,
                 messageWidth: messageWidth,
                 showName: showName,
+                currentUserIsAuthor: currentUserIsAuthor,
               )
             : TextMessage(
                 emojiEnlargementBehavior: emojiEnlargementBehavior,
@@ -313,84 +315,93 @@ class Message extends StatelessWidget {
             topRight: Radius.circular(messageBorderRadius),
           );
 
-    return Container(
-      alignment: bubbleRtlAlignment == BubbleRtlAlignment.left
-          ? currentUserIsAuthor
-              ? AlignmentDirectional.centerEnd
-              : AlignmentDirectional.centerStart
-          : currentUserIsAuthor
-              ? Alignment.centerRight
-              : Alignment.centerLeft,
-      margin: bubbleRtlAlignment == BubbleRtlAlignment.left
-          ? EdgeInsetsDirectional.only(
-              bottom: 4,
-              end: isMobile ? query.padding.right : 0,
-              start: 20 + (isMobile ? query.padding.left : 0),
-            )
-          : EdgeInsets.only(
-              bottom: 4,
-              left: 20 + (isMobile ? query.padding.left : 0),
-              right: isMobile ? query.padding.right : 0,
-            ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        textDirection: bubbleRtlAlignment == BubbleRtlAlignment.left
-            ? null
-            : TextDirection.ltr,
-        children: [
-          if (!currentUserIsAuthor && showUserAvatars) _avatarBuilder(),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: messageWidth.toDouble(),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onDoubleTap: () => onMessageDoubleTap?.call(context, message),
-                  onLongPress: () => onMessageLongPress?.call(context, message),
-                  onTap: () => onMessageTap?.call(context, message),
-                  child: onMessageVisibilityChanged != null
-                      ? VisibilityDetector(
-                          key: Key(message.id),
-                          onVisibilityChanged: (visibilityInfo) =>
-                              onMessageVisibilityChanged!(
-                            message,
-                            visibilityInfo.visibleFraction > 0.1,
-                          ),
-                          child: _bubbleBuilder(
+    return Center(
+      child: Container(
+        alignment: bubbleRtlAlignment == BubbleRtlAlignment.left
+            ? currentUserIsAuthor
+                ? AlignmentDirectional.centerEnd
+                : AlignmentDirectional.centerStart
+            : currentUserIsAuthor
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+        margin: bubbleRtlAlignment == BubbleRtlAlignment.left
+            ? EdgeInsetsDirectional.only(
+                bottom: 4,
+                end: isMobile ? query.padding.right : 0,
+                start: 20 + (isMobile ? query.padding.left : 0),
+              )
+            : EdgeInsets.only(
+                bottom: 4,
+                left: 20 + (isMobile ? query.padding.left : 0),
+                right: isMobile ? query.padding.right : 0,
+              ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          textDirection: bubbleRtlAlignment == BubbleRtlAlignment.left
+              ? null
+              : TextDirection.ltr,
+          children: [
+            if (!currentUserIsAuthor && showUserAvatars) _avatarBuilder(),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: messageWidth.toDouble(),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onDoubleTap: () =>
+                        onMessageDoubleTap?.call(context, message),
+                    onLongPress: () =>
+                        onMessageLongPress?.call(context, message),
+                    onTap: () => onMessageTap?.call(context, message),
+                    child: onMessageVisibilityChanged != null
+                        ? VisibilityDetector(
+                            key: Key(message.id),
+                            onVisibilityChanged: (visibilityInfo) {
+                              if (visibilityInfo.visibleFraction > 0.7 &&
+                                  !message.metadata!['isSeen'] &&
+                                  !currentUserIsAuthor) {
+                                onMessageVisibilityChanged!(
+                                  message,
+                                  true,
+                                );
+                              }
+                            },
+                            child: _bubbleBuilder(
+                              context,
+                              borderRadius.resolve(Directionality.of(context)),
+                              currentUserIsAuthor,
+                              enlargeEmojis,
+                            ),
+                          )
+                        : _bubbleBuilder(
                             context,
                             borderRadius.resolve(Directionality.of(context)),
                             currentUserIsAuthor,
                             enlargeEmojis,
                           ),
-                        )
-                      : _bubbleBuilder(
-                          context,
-                          borderRadius.resolve(Directionality.of(context)),
-                          currentUserIsAuthor,
-                          enlargeEmojis,
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (currentUserIsAuthor)
-            Padding(
-              padding: InheritedChatTheme.of(context).theme.statusIconPadding,
-              child: showStatus
-                  ? GestureDetector(
-                      onLongPress: () =>
-                          onMessageStatusLongPress?.call(context, message),
-                      onTap: () => onMessageStatusTap?.call(context, message),
-                      child: customStatusBuilder != null
-                          ? customStatusBuilder!(message, context: context)
-                          : MessageStatus(status: message.status),
-                    )
-                  : null,
-            ),
-        ],
+            if (currentUserIsAuthor)
+              Padding(
+                padding: InheritedChatTheme.of(context).theme.statusIconPadding,
+                child: showStatus
+                    ? GestureDetector(
+                        onLongPress: () =>
+                            onMessageStatusLongPress?.call(context, message),
+                        onTap: () => onMessageStatusTap?.call(context, message),
+                        child: customStatusBuilder != null
+                            ? customStatusBuilder!(message, context: context)
+                            : MessageStatus(status: message.status),
+                      )
+                    : null,
+              ),
+          ],
+        ),
       ),
     );
   }
